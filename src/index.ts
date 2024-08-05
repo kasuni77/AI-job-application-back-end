@@ -8,15 +8,23 @@ import GlobalErrorHandlingMiddleware from "./api/middleware/global-error-handler
 
 const app = express();
 
+// CORS configuration
+const corsOptions = {
+    origin: 'https://ai-job-portal-front-end-kasuni77.netlify.app',
+    optionsSuccessStatus: 200,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions)); // Apply CORS middleware first
 app.use(express.json());
-app.use(cors())
 
 connectDB();
 
 app.use("/jobs", jobsRouter);
-app.use("/jobApplications", jobApplicationRouter)
+app.use("/jobApplications", jobApplicationRouter);
 
-app.use(GlobalErrorHandlingMiddleware)
+app.use(GlobalErrorHandlingMiddleware);
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`Server is listening on port ${PORT}.`));
