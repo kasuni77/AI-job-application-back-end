@@ -17,10 +17,10 @@ interface JobApplicationSchema {
     rating?: string | null;
 }
 
-const apiKey = process.env.OPENAI_API_KEY;
+const apiKey = process.env.OPEN_API_KEY;
 
 if (!apiKey) {
-    throw new Error("The OPENAI_API_KEY is missing or empty!");
+    throw new Error("The OPEN_API_KEY is missing or empty!");
 }
 
 const client = new OpenAI({ apiKey });
