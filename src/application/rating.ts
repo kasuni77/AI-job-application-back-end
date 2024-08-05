@@ -1,28 +1,62 @@
-import { Types } from "mongoose";
-import JobApplication from "../infrastructure/schemas/jobApplication";
 import OpenAI from "openai";
+import dotenv from "dotenv";
+import JobApplication from "../infrastructure/schemas/jobApplication";
+import { Types } from "mongoose";
 
-const client = new OpenAI({apiKey: process.env.OPEN_API_KEY})
+dotenv.config();
+
+interface Job {
+    title: string;
+}
+
+interface JobApplicationSchema {
+    userId: string;
+    fullName: string;
+    answers: string[];
+    job: Job | Types.ObjectId;
+    rating?: string | null;
+}
+
+const apiKey = process.env.OPENAI_API_KEY;
+
+if (!apiKey) {
+    throw new Error("The OPENAI_API_KEY is missing or empty!");
+}
+
+const client = new OpenAI({ apiKey });
+
 export async function generateRating(jobApplicationId: Types.ObjectId) {
     const jobApplication = await JobApplication.findById(jobApplicationId).populate("job");
-    
-    const content = `Role:${jobApplication?.job.title},User Description:${jobApplication?.answers.join(". ")}`
 
-    const completion = await client.chat.completions.create(
-         {
-            messages: [{role:"user", content}],
-            model: "ft:gpt-3.5-turbo-0125:stemlink:fullstacktutorial:9oxtnnXK"
-        }
-    )
+    if (!jobApplication) {
+        throw new Error("Job application not found!");
+    }
 
-    //convert this string to a json object
+    const job = jobApplication.job as unknown as Job;
+    const answers = jobApplication.answers;
+
+    if (!job || !job.title || !answers) {
+        throw new Error("Invalid job application!");
+    }
+
+    const content = `Role: ${job.title}, User Description: ${answers.join(". ")}`;
+
+    const completion = await client.chat.completions.create({
+        messages: [{ role: "user", content }],
+        model: "ft:gpt-3.5-turbo-0125:stemlink:fullstacktutorial:9oxtnnXK",
+    });
+
     const strResponse = completion.choices[0].message.content;
     console.log(strResponse);
-    const response = JSON.parse(strResponse);
 
-    if(!response.rate) {
-        return
+    if (strResponse === null) {
+        throw new Error("Response is null!");
     }
-    await JobApplication.findOneAndUpdate({_id:jobApplicationId},{rating:response.rate})
 
+    const response = JSON.parse(strResponse);
+    if (!response.rate) {
+        return;
+    }
+
+    await JobApplication.findOneAndUpdate({ _id: jobApplicationId }, { rating: response.rate });
 }
